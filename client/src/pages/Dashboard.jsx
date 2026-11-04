@@ -1,3 +1,4 @@
+import PageHeading from "../components/PageHeading";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -14,15 +15,22 @@ import {
   FlaskConical,
   NotebookPen,
   Stethoscope,
+  Clock3,
+  ArrowUpRight,
+  Heart,
+  Sparkles,
 } from "lucide-react";
 import { AuthContext } from "../context/AuthContext";
 import { getDashboardSummary, getMonthlyHours } from "../services/dashboard";
 import MenuBar from "../components/MenuBar";
 
-function StatCard({ title, value, subtitle }) {
+function StatCard({ title, value, subtitle, icon: Icon }) {
   return (
-    <div className="rounded-2xl border border-pink-200 bg-white/75 p-5 shadow-sm backdrop-blur">
-      <p className="text-sm font-medium text-rose-700">{title}</p>
+    <div className="stat-card rounded-2xl border border-pink-200 bg-white/75 p-5 shadow-sm backdrop-blur">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium text-rose-700">{title}</p>
+        <span className="stat-icon"><Icon size={19} strokeWidth={1.7} /></span>
+      </div>
       <p className="mt-2 text-3xl font-extrabold tracking-tight text-rose-950">
         {value}
       </p>
@@ -76,8 +84,9 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-rose-50 p-6">
-        <div className="mx-auto max-w-6xl animate-pulse rounded-3xl border border-pink-200 bg-white/70 p-8">
+      <div className="app-page min-h-screen p-4 md:p-6">
+        <MenuBar />
+        <div className="mx-auto max-w-6xl animate-pulse rounded-3xl border border-pink-200 bg-white/70 p-8" role="status" aria-label="Loading dashboard">
           <div className="h-8 w-56 rounded bg-pink-100" />
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div className="h-32 rounded-2xl bg-pink-100" />
@@ -92,7 +101,8 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-rose-50 p-6">
+      <div className="app-page min-h-screen p-4 md:p-6">
+        <MenuBar />
         <div className="mx-auto max-w-3xl rounded-3xl border border-rose-200 bg-white p-8 text-center">
           <p className="font-semibold text-rose-900">{error}</p>
         </div>
@@ -100,53 +110,63 @@ export default function Dashboard() {
     );
   }
 
-  const progress = Math.min(Number(dashboard?.progress || 0), 100);
-
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_0%_0%,#ffe3ee_0%,#ffd7e9_35%,#fff3f8_70%,#fff_100%)] p-4 md:p-6">
+    <div className="app-page min-h-screen theme-page-background p-4 md:p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <MenuBar />
 
-        <section className="overflow-hidden rounded-3xl border border-pink-200 bg-white/75 p-6 shadow-[0_18px_50px_rgba(244,114,182,0.2)] backdrop-blur sm:p-8">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold text-pink-600">Dashboard</p>
-              <h1 className="mt-1 text-3xl font-black text-rose-950 sm:text-4xl">
-                Welcome, {user?.full_name || "Clinician"}
-              </h1>
-              <p className="mt-2 text-sm text-rose-900/75">
-                Keep your duty logs, procedures, and reflections in one place.
-              </p>
-            </div>
+        <section className="dashboard-heading rounded-3xl border border-pink-200 bg-white p-6 md:p-8">
+          <PageHeading eyebrow="DASHBOARD" title={`Hi, ${user?.full_name?.split(" ")[0] || "Clinician"}.`} description="A little progress, every day.">
+            <Link to="/duty-logs" className="page-heading-badge">Log a shift <ArrowUpRight size={16} /></Link>
+          </PageHeading>
+        </section>
+
+        <section className="mobile-duty-summary" aria-label="Your duty hours">
+          <div>
+            <p className="mobile-summary-label"><Heart size={13} aria-hidden="true" /> Your journey</p>
+            <h2>{dashboard?.totalHours ?? 0} <span>hours</span></h2>
+            <p>Total duty hours logged</p>
+            <Link to="/duty-logs">Keep growing <ArrowUpRight size={14} /></Link>
+          </div>
+          <div className="mobile-shift-badge">
+            <Sparkles className="shift-badge-sparkle" size={23} aria-hidden="true" />
+            <div className="shift-badge-icon"><Stethoscope size={25} strokeWidth={1.7} aria-hidden="true" /></div>
+            <strong>{dashboard?.totalDutyLogs ?? 0}</strong>
+            <span>{dashboard?.totalDutyLogs === 1 ? "shift logged" : "shifts logged"}</span>
+            <Heart className="shift-badge-heart" size={16} aria-hidden="true" />
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="dashboard-stats grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Clinical activity summary">
           <StatCard
+            icon={ClipboardPlus}
             title="Total Duty Logs"
             value={dashboard?.totalDutyLogs ?? 0}
             subtitle="All sessions recorded"
           />
           <StatCard
             title="Total Procedures"
+            icon={Stethoscope}
             value={dashboard?.totalProcedures ?? 0}
             subtitle="Clinical procedures tracked"
           />
           <StatCard
             title="Total Reflections"
+            icon={NotebookPen}
             value={dashboard?.totalReflections ?? 0}
             subtitle="Reflection entries completed"
           />
           <StatCard
             title="Total Hours"
+            icon={Clock3}
             value={dashboard?.totalHours ?? 0}
-            subtitle={`Required: ${dashboard?.requiredHours ?? 0} hrs`}
+            subtitle="All hours recorded · No limit"
           />
         </section>
 
         <section className="grid gap-6 lg:grid-cols-3">
           <div className="rounded-3xl border border-pink-200 bg-white/75 p-6 shadow-sm lg:col-span-2">
-            <h2 className="text-xl font-bold text-rose-950">Monthly Hours</h2>
+            <h2 className="text-rose-950">Monthly Hours</h2>
             <p className="mt-1 text-sm text-rose-900/70">
               Your logged hours trend
             </p>
@@ -158,24 +178,24 @@ export default function Dashboard() {
                     <linearGradient id="pinkHours" x1="0" y1="0" x2="0" y2="1">
                       <stop
                         offset="5%"
-                        stopColor="#ec4899"
+                        stopColor="var(--color-pink-500)"
                         stopOpacity={0.55}
                       />
                       <stop
                         offset="95%"
-                        stopColor="#ec4899"
+                        stopColor="var(--color-pink-500)"
                         stopOpacity={0.08}
                       />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f9a8d4" />
-                  <XAxis dataKey="month" stroke="#9f1239" />
-                  <YAxis allowDecimals={false} stroke="#9f1239" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-pink-200)" />
+                  <XAxis dataKey="month" stroke="var(--color-rose-800)" />
+                  <YAxis allowDecimals={false} stroke="var(--color-rose-800)" />
                   <Tooltip />
                   <Area
                     type="monotone"
                     dataKey="hours"
-                    stroke="#db2777"
+                    stroke="var(--color-pink-600)"
                     strokeWidth={3}
                     fill="url(#pinkHours)"
                   />
@@ -186,26 +206,19 @@ export default function Dashboard() {
 
           <div className="space-y-6">
             <div className="rounded-3xl border border-pink-200 bg-white/75 p-6 shadow-sm">
-              <h2 className="text-xl font-bold text-rose-950">
-                Hours Progress
+              <h2 className="text-rose-950">
+                Hours Logged
               </h2>
               <p className="mt-1 text-sm text-rose-900/70">
-                {dashboard?.totalHours ?? 0} of {dashboard?.requiredHours ?? 0}{" "}
-                hours
+                {dashboard?.totalHours ?? 0} total hours
               </p>
-              <div className="mt-4 h-3 rounded-full bg-pink-100">
-                <div
-                  className="h-3 rounded-full bg-gradient-to-r from-pink-500 to-rose-500"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
               <p className="mt-2 text-sm font-semibold text-pink-700">
-                {progress.toFixed(2)}% complete
+                Keep logging — there’s no hour limit.
               </p>
             </div>
 
-            <div className="rounded-3xl border border-pink-200 bg-white/75 p-6 shadow-sm">
-              <h2 className="text-xl font-bold text-rose-950">Quick Actions</h2>
+            <div className="dashboard-quick-actions rounded-3xl border border-pink-200 bg-white/75 p-6 shadow-sm">
+              <h2 className="text-rose-950">Quick Actions</h2>
               <div className="mt-4 space-y-3">
                 <Link
                   to="/duty-logs"

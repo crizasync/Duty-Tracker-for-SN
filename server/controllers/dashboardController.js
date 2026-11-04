@@ -31,14 +31,6 @@ exports.getDashboard = async (req, res) => {
 
     const totalHours = parseFloat(hoursResult.rows[0].sum || 0);
 
-    // REQUIRED HOURS (you can change this later per user settings)
-    const requiredHours = 500;
-
-    const progress =
-      requiredHours > 0
-        ? ((totalHours / requiredHours) * 100).toFixed(2)
-        : 0;
-
     res.json({
       success: true,
       dashboard: {
@@ -46,8 +38,6 @@ exports.getDashboard = async (req, res) => {
         totalProcedures: parseInt(procedures.rows[0].count),
         totalReflections: parseInt(reflections.rows[0].count),
         totalHours,
-        requiredHours,
-        progress: parseFloat(progress),
       },
     });
   } catch (error) {

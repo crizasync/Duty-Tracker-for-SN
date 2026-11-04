@@ -3,6 +3,7 @@ import {
   login as loginRequest,
   register as registerRequest,
 } from "../services/auth";
+import { getProfile } from "../services/profile";
 
 export const AuthContext = createContext();
 
@@ -20,6 +21,34 @@ export default function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let active = true;
+    const refreshProfile = async () => {
+      try {
+        const { data } = await getProfile();
+        if (!active || !data.profile) return;
+
+        setUser((current) => {
+          if (current?.id !== data.profile.id) return current;
+          const updated = { ...current, ...data.profile };
+          try {
+            localStorage.setItem("user", JSON.stringify(updated));
+          } catch {
+            // Keep the current profile visible if browser storage is full.
+          }
+          return updated;
+        });
+      } catch {
+        // Keep the sign-in profile when the profile service is unavailable.
+      }
+    };
+
+    refreshProfile();
+    return () => { active = false; };
+  }, [user?.id]);
+
   const loginUser = (userData, token) => {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(userData));
@@ -27,16 +56,16 @@ export default function AuthProvider({ children }) {
     setUser(userData);
   };
 
-  const login = async (email, password) => {
-    const response = await loginRequest({ email, password });
+  const login = async (username, password) => {
+    const response = await loginRequest({ username, password });
     const { user: userData, token } = response.data;
 
     loginUser(userData, token);
     return response.data;
   };
 
-  const register = async (fullName, email, password) => {
-    const response = await registerRequest({ fullName, email, password });
+  const register = async (fullName, username, password) => {
+    const response = await registerRequest({ fullName, username, password });
     return response.data;
   };
 
@@ -45,6 +74,16 @@ export default function AuthProvider({ children }) {
     localStorage.removeItem("user");
 
     setUser(null);
+  };
+
+  const updateUser = (profile) => {
+    const updated = { ...user, ...profile };
+    setUser(updated);
+    try {
+      localStorage.setItem("user", JSON.stringify(updated));
+    } catch {
+      // Keep the saved profile visible when browser storage is unavailable.
+    }
   };
 
   return (
@@ -56,6 +95,7 @@ export default function AuthProvider({ children }) {
         register,
         loginUser,
         logoutUser,
+        updateUser,
       }}
     >
       {!loading && children}

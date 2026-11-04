@@ -1,3 +1,5 @@
+import ModalDecoration from "../components/ModalDecoration";
+import PageHeading from "../components/PageHeading";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { Download, FileText, PieChart, X } from "lucide-react";
@@ -71,31 +73,17 @@ export default function Reports() {
   };
 
   return (
-    <div className="min-h-screen bg-rose-50 p-6">
+    <div className="app-page reports-page min-h-screen p-4 md:p-6">
       <div className="mx-auto max-w-6xl space-y-5">
         <MenuBar />
 
-        <section className="overflow-hidden rounded-3xl border border-pink-200 bg-white p-6 shadow-sm md:p-8">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-pink-600">
-                Reports Center
-              </p>
-              <h1 className="mt-1 text-3xl font-black text-rose-900">
-                Generate and download PDFs
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-rose-700">
-                Export duty logs, procedures, reflections, or a clinical
-                summary.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-pink-200 bg-pink-50 px-4 py-3 text-sm font-semibold text-pink-700">
-              All reports are delivered as PDF downloads.
-            </div>
-          </div>
+        <section className="rounded-3xl border border-pink-200 bg-white p-6 shadow-sm md:p-8">
+          <PageHeading eyebrow="REPORTS" title="Your reports" description="Your progress, ready to share.">
+            <span className="page-heading-badge">PDF downloads</span>
+          </PageHeading>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="report-cards grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {reportCards.map((report) => {
             const Icon = report.icon;
             return (
@@ -112,7 +100,7 @@ export default function Reports() {
                   </span>
                 </div>
 
-                <h2 className="mt-4 text-lg font-bold text-rose-900">
+                <h2 className="mt-4 text-rose-900">
                   {report.title}
                 </h2>
                 <p className="mt-2 text-sm text-rose-700">
@@ -134,11 +122,12 @@ export default function Reports() {
       </div>
 
       {isOpen && selectedReport && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-rose-950/35 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-3xl border border-pink-200 bg-white p-6 shadow-2xl md:p-7">
-            <div className="mb-4 flex items-center justify-between">
+        <div className="cute-modal-overlay fixed inset-0 z-50 grid place-items-center bg-rose-950/35 p-4 backdrop-blur-sm">
+          <div className="cute-modal w-full max-w-lg rounded-3xl border border-pink-200 bg-white p-6 shadow-2xl md:p-7">
+            <div className="cute-modal-heading mb-4 flex items-center justify-between">
+              <ModalDecoration />
               <div>
-                <h2 className="text-xl font-bold text-rose-900">
+                <h2 className="text-rose-900">
                   Generate {selectedReport.title}
                 </h2>
                 <p className="text-sm text-rose-700">

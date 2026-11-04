@@ -1,6 +1,14 @@
+import FacilityPicker from "../components/FacilityPicker";
+import { locationFromLog } from "../utils/geoMap";
+import { dutyRecordsEvent } from "../services/dutyLogs";
+import ModalDecoration from "../components/ModalDecoration";
+import RecordEmpty from "../components/RecordEmpty";
+import RecordFilters from "../components/RecordFilters";
+import useDesktopRecords from "../hooks/useDesktopRecords";
+import PageHeading from "../components/PageHeading";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Eye, LayoutGrid, List, Pencil, Trash2, X } from "lucide-react";
+import { Eye, LayoutGrid, List, Pencil, Trash2, X, Clock3, CirclePlus, Hospital, ChevronRight } from "lucide-react";
 import MenuBar from "../components/MenuBar";
 import {
   createDutyLog,
@@ -17,6 +25,7 @@ const initialForm = {
   timeIn: "",
   timeOut: "",
   remarks: "",
+  facilityLocation: null,
 };
 
 export default function DutyLogs() {
@@ -28,8 +37,10 @@ export default function DutyLogs() {
   });
   const [dutyLogs, setDutyLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [offline, setOffline] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [viewMode, setViewMode] = useState("list");
+  const desktopRecords = useDesktopRecords();
+  const [viewMode, setViewMode] = useState("tile");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -49,6 +60,7 @@ export default function DutyLogs() {
       };
       const res = await getDutyLogs(params);
       setDutyLogs(res.data.dutyLogs || []);
+      setOffline(Boolean(res.data.offline));
     } catch {
       toast.error("Could not load duty logs");
     } finally {
@@ -61,6 +73,12 @@ export default function DutyLogs() {
     loadDutyLogs();
   }, [loadDutyLogs]);
 
+  useEffect(() => {
+    const refresh = () => { loadDutyLogs(filters); };
+    window.addEventListener(dutyRecordsEvent, refresh);
+    return () => window.removeEventListener(dutyRecordsEvent, refresh);
+  }, [loadDutyLogs, filters]);
+
   const totalLoggedHours = useMemo(
     () => dutyLogs.reduce((sum, row) => sum + Number(row.total_hours || 0), 0),
     [dutyLogs],
@@ -68,10 +86,11 @@ export default function DutyLogs() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
+    if (submitting) return;
     setSubmitting(true);
     try {
-      await createDutyLog(formData);
-      toast.success("Duty log created");
+      const result = await createDutyLog(formData);
+      toast.success(result.data.pending ? "Saved on this device. Will sync when connected." : "Duty log created");
       setFormData(initialForm);
       setIsCreateOpen(false);
       await loadDutyLogs();
@@ -106,6 +125,7 @@ export default function DutyLogs() {
   };
 
   const openEditModal = (log) => {
+    if (log.pending) { toast("This shift is saved on your device. Connect to sync before editing."); return; }
     setEditingLogId(log.id);
     setEditForm({
       dutyDate: String(log.duty_date).slice(0, 10),
@@ -115,6 +135,7 @@ export default function DutyLogs() {
       timeIn: log.time_in || "",
       timeOut: log.time_out || "",
       remarks: log.remarks || "",
+      facilityLocation: locationFromLog(log),
     });
     setIsEditOpen(true);
   };
@@ -153,53 +174,46 @@ export default function DutyLogs() {
   };
 
   return (
-    <div className="min-h-screen bg-rose-50 p-6">
+    <div className="app-page min-h-screen p-4 md:p-6">
       <div className="mx-auto max-w-6xl space-y-5">
         <MenuBar />
+        {offline && <p className="geo-notice" role="status">You are offline. Showing records saved on this device. New shifts will sync when connected.</p>}
 
-        <div className="rounded-3xl border border-rose-200 bg-white p-6 shadow-sm md:p-8">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-rose-900">Duty Logs</h1>
-              <p className="mt-1 text-sm text-rose-700">
-                Track every shift and monitor your duty hours.
-              </p>
-            </div>
+        <div className="records-panel rounded-3xl border border-rose-200 bg-white p-6 shadow-sm md:p-8">
+          <PageHeading eyebrow="DUTY LOGS" title="Your shifts" description="Every shift, in one place.">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="rounded-xl border border-pink-200 bg-pink-50 px-4 py-2 text-sm font-semibold text-pink-700">
-                Total Logged Hours: {totalLoggedHours.toFixed(2)}
+              <div className="hours-heading-badge rounded-xl border border-pink-200 bg-pink-50 px-4 py-2 text-sm font-semibold text-pink-700">
+                <Clock3 size={27} /> <span>Total Logged Hours:<strong>{totalLoggedHours.toFixed(2)}</strong></span>
               </div>
               <button
                 type="button"
                 onClick={() => setIsCreateOpen(true)}
-                className="rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-105"
+                className="page-heading-primary-action rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-105"
               >
-                Add Duty Log
+                <CirclePlus size={18} /> Add Duty Log
               </button>
             </div>
-          </div>
+          </PageHeading>
 
-          <form
-            onSubmit={handleFilter}
-            className="mt-6 grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]"
-          >
-            <input
+          <RecordFilters onSubmit={handleFilter} onClear={clearFilters} loading={loading}>
+
+            <label className="record-filter-field"><span>From</span><input
               type="date"
               value={filters.startDate}
               onChange={(e) =>
                 setFilters({ ...filters, startDate: e.target.value })
               }
               className="rounded-xl border border-rose-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-300"
-            />
-            <input
+            /></label>
+            <label className="record-filter-field"><span>To</span><input
               type="date"
               value={filters.endDate}
               onChange={(e) =>
                 setFilters({ ...filters, endDate: e.target.value })
               }
               className="rounded-xl border border-rose-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-300"
-            />
-            <select
+            /></label>
+            <label className="record-filter-field"><span>Shift</span><select
               value={filters.shift}
               onChange={(e) =>
                 setFilters({ ...filters, shift: e.target.value })
@@ -210,25 +224,11 @@ export default function DutyLogs() {
               <option value="Morning">Morning</option>
               <option value="Afternoon">Afternoon</option>
               <option value="Night">Night</option>
-            </select>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                className="rounded-xl border border-pink-300 bg-pink-50 px-4 py-2 text-sm font-semibold text-pink-700 transition hover:bg-pink-100"
-              >
-                Apply Filters
-              </button>
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="rounded-xl border border-rose-300 bg-white px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
-              >
-                Clear Filters
-              </button>
-            </div>
-          </form>
+            </select></label>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50/60 px-3 py-2">
+          </RecordFilters>
+
+          <div className="record-view-switch mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50/60 px-3 py-2">
             <p className="text-sm font-semibold text-rose-800">Logs View</p>
             <div className="ml-auto inline-flex rounded-xl border border-rose-200 bg-white p-1">
               <button
@@ -241,7 +241,7 @@ export default function DutyLogs() {
                 }`}
               >
                 <List size={14} />
-                List
+                Table
               </button>
               <button
                 type="button"
@@ -253,12 +253,12 @@ export default function DutyLogs() {
                 }`}
               >
                 <LayoutGrid size={14} />
-                Tile
+                Cards
               </button>
             </div>
           </div>
 
-          {viewMode === "list" ? (
+          {desktopRecords && viewMode === "list" ? (
             <div className="mt-6 overflow-x-auto rounded-2xl border border-rose-200">
               <table className="min-w-full text-left text-sm">
                 <thead className="bg-rose-100 text-rose-900">
@@ -313,6 +313,7 @@ export default function DutyLogs() {
                           </button>
                           <button
                             type="button"
+                            disabled={log.pending}
                             onClick={() => openEditModal(log)}
                             className="inline-flex items-center gap-1 rounded-lg border border-pink-300 bg-pink-50 px-2.5 py-1.5 text-xs font-semibold text-pink-700 transition hover:bg-pink-100"
                           >
@@ -335,33 +336,21 @@ export default function DutyLogs() {
               </table>
             </div>
           ) : (
-            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="record-cards mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {loading && <p className="record-loading col-span-full" role="status">Finding your records...</p>}
               {!loading && dutyLogs.length === 0 && (
-                <div className="col-span-full rounded-2xl border border-rose-200 bg-white p-6 text-center text-rose-700">
-                  No duty logs found.
-                </div>
+                <RecordEmpty>No duty logs found.</RecordEmpty>
               )}
 
               {dutyLogs.map((log) => (
-                <article
+                <details
                   key={log.id}
-                  className="rounded-2xl border border-rose-200 bg-white p-5 shadow-sm transition hover:shadow-md"
+                  open={desktopRecords || undefined}
+                  className="shift-record rounded-2xl border border-rose-200 bg-white p-5 shadow-sm transition hover:shadow-md"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-pink-600">
-                        {log.shift} Shift
-                      </p>
-                      <h3 className="mt-1 text-lg font-bold text-rose-900">
-                        {log.hospital}
-                      </h3>
-                      <p className="text-sm text-rose-700">{log.ward}</p>
-                    </div>
-                    <div className="rounded-lg bg-pink-50 px-2.5 py-1 text-xs font-semibold text-pink-700">
-                      {String(log.duty_date).slice(0, 10)}
-                    </div>
-                  </div>
-
+                  <summary className="shift-record-summary"><span className="hospital-icon"><Hospital size={25} /></span><span>{log.hospital || "Hospital"}{log.pending && <small className="duty-pending-badge">Waiting to sync</small>}</span><ChevronRight size={19} /></summary>
+                  <div className="shift-record-content">
+                    <p className="text-sm text-rose-700">{String(log.duty_date).slice(0, 10)} ? {log.shift} ? {log.ward}</p>
                   <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div className="rounded-lg bg-rose-50 px-3 py-2">
                       <p className="text-xs text-rose-600">Time In</p>
@@ -411,7 +400,8 @@ export default function DutyLogs() {
                       Delete
                     </button>
                   </div>
-                </article>
+                </div>
+                </details>
               ))}
             </div>
           )}
@@ -419,11 +409,12 @@ export default function DutyLogs() {
       </div>
 
       {isEditOpen && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-rose-950/35 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-3xl border border-pink-200 bg-white p-6 shadow-2xl md:p-7">
-            <div className="mb-4 flex items-center justify-between">
+        <div className="cute-modal-overlay fixed inset-0 z-50 grid place-items-center bg-rose-950/35 p-4 backdrop-blur-sm">
+          <div className="cute-modal w-full max-w-2xl rounded-3xl border border-pink-200 bg-white p-6 shadow-2xl md:p-7">
+            <div className="cute-modal-heading mb-4 flex items-center justify-between">
+              <ModalDecoration />
               <div>
-                <h2 className="text-xl font-bold text-rose-900">
+                <h2 className="text-rose-900">
                   Edit Duty Log
                 </h2>
                 <p className="text-sm text-rose-700">
@@ -458,11 +449,12 @@ export default function DutyLogs() {
                 placeholder="Hospital"
                 value={editForm.hospital}
                 onChange={(e) =>
-                  setEditForm({ ...editForm, hospital: e.target.value })
+                  setEditForm({ ...editForm, hospital: e.target.value, facilityLocation: null })
                 }
                 className="rounded-xl border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-300"
                 required
               />
+              <FacilityPicker hospital={editForm.hospital} location={editForm.facilityLocation} onChange={(facility) => setEditForm({ ...editForm, facilityLocation: facility, ...(facility?.name ? { hospital: facility.name } : {}) })} />
               <input
                 type="text"
                 placeholder="Ward"
@@ -535,11 +527,12 @@ export default function DutyLogs() {
       )}
 
       {isViewOpen && viewLog && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-rose-950/35 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-3xl border border-pink-200 bg-white p-6 shadow-2xl md:p-7">
-            <div className="mb-4 flex items-center justify-between">
+        <div className="cute-modal-overlay fixed inset-0 z-50 grid place-items-center bg-rose-950/35 p-4 backdrop-blur-sm">
+          <div className="cute-modal w-full max-w-2xl rounded-3xl border border-pink-200 bg-white p-6 shadow-2xl md:p-7">
+            <div className="cute-modal-heading mb-4 flex items-center justify-between">
+              <ModalDecoration />
               <div>
-                <h2 className="text-xl font-bold text-rose-900">
+                <h2 className="text-rose-900">
                   Duty Log Details
                 </h2>
                 <p className="text-sm text-rose-700">
@@ -627,11 +620,12 @@ export default function DutyLogs() {
       )}
 
       {isCreateOpen && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-rose-950/35 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-3xl border border-pink-200 bg-white p-6 shadow-2xl md:p-7">
-            <div className="mb-4 flex items-center justify-between">
+        <div className="cute-modal-overlay fixed inset-0 z-50 grid place-items-center bg-rose-950/35 p-4 backdrop-blur-sm">
+          <div className="cute-modal w-full max-w-2xl rounded-3xl border border-pink-200 bg-white p-6 shadow-2xl md:p-7">
+            <div className="cute-modal-heading mb-4 flex items-center justify-between">
+              <ModalDecoration />
               <div>
-                <h2 className="text-xl font-bold text-rose-900">
+                <h2 className="text-rose-900">
                   Add Duty Log
                 </h2>
                 <p className="text-sm text-rose-700">
@@ -663,11 +657,12 @@ export default function DutyLogs() {
                 placeholder="Hospital"
                 value={formData.hospital}
                 onChange={(e) =>
-                  setFormData({ ...formData, hospital: e.target.value })
+                  setFormData({ ...formData, hospital: e.target.value, facilityLocation: null })
                 }
                 className="rounded-xl border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-300"
                 required
               />
+              <FacilityPicker hospital={formData.hospital} location={formData.facilityLocation} onChange={(facility) => setFormData({ ...formData, facilityLocation: facility, ...(facility?.name ? { hospital: facility.name } : {}) })} />
               <input
                 type="text"
                 placeholder="Ward"

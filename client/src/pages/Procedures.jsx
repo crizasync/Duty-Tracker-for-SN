@@ -1,3 +1,8 @@
+import ModalDecoration from "../components/ModalDecoration";
+import RecordEmpty from "../components/RecordEmpty";
+import RecordFilters from "../components/RecordFilters";
+import useDesktopRecords from "../hooks/useDesktopRecords";
+import PageHeading from "../components/PageHeading";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Eye, LayoutGrid, List, Pencil, Plus, Trash2, X } from "lucide-react";
@@ -24,7 +29,8 @@ export default function Procedures() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [updating, setUpdating] = useState(false);
-  const [viewMode, setViewMode] = useState("list");
+  const desktopRecords = useDesktopRecords();
+  const [viewMode, setViewMode] = useState("tile");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -149,18 +155,12 @@ export default function Procedures() {
   };
 
   return (
-    <div className="min-h-screen bg-rose-50 p-6">
+    <div className="app-page min-h-screen p-4 md:p-6">
       <div className="mx-auto max-w-6xl space-y-5">
         <MenuBar />
 
-        <div className="rounded-3xl border border-rose-200 bg-white p-6 shadow-sm md:p-8">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-rose-900">Procedures</h1>
-              <p className="mt-1 text-sm text-rose-700">
-                Log clinical procedures and keep them organized.
-              </p>
-            </div>
+        <div className="records-panel rounded-3xl border border-rose-200 bg-white p-6 shadow-sm md:p-8">
+          <PageHeading eyebrow="PROCEDURES" title="Your practice" description="Keep your skills growing.">
             <div className="flex flex-wrap items-center gap-2">
               <div className="rounded-xl border border-pink-200 bg-pink-50 px-4 py-2 text-sm font-semibold text-pink-700">
                 Total: {totalProcedures} | Completed: {completedProcedures}
@@ -168,19 +168,17 @@ export default function Procedures() {
               <button
                 type="button"
                 onClick={() => setIsCreateOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-105"
+                className="page-heading-primary-action inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-105"
               >
                 <Plus size={16} />
                 Add Procedure
               </button>
             </div>
-          </div>
+          </PageHeading>
 
-          <form
-            onSubmit={handleFilter}
-            className="mt-6 grid gap-3 md:grid-cols-[1fr_1fr_auto]"
-          >
-            <input
+          <RecordFilters onSubmit={handleFilter} onClear={clearFilters} loading={loading}>
+
+            <label className="record-filter-field"><span>Procedure name</span><input
               type="text"
               placeholder="Search procedure name"
               value={filters.procedureName}
@@ -188,8 +186,8 @@ export default function Procedures() {
                 setFilters({ ...filters, procedureName: e.target.value })
               }
               className="rounded-xl border border-rose-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-300"
-            />
-            <select
+            /></label>
+            <label className="record-filter-field"><span>Status</span><select
               value={filters.status}
               onChange={(e) =>
                 setFilters({ ...filters, status: e.target.value })
@@ -199,25 +197,11 @@ export default function Procedures() {
               <option value="">All Status</option>
               <option value="Completed">Completed</option>
               <option value="Pending">Pending</option>
-            </select>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                className="rounded-xl border border-pink-300 bg-pink-50 px-4 py-2 text-sm font-semibold text-pink-700 transition hover:bg-pink-100"
-              >
-                Apply Filters
-              </button>
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="rounded-xl border border-rose-300 bg-white px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
-              >
-                Clear Filters
-              </button>
-            </div>
-          </form>
+            </select></label>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50/60 px-3 py-2">
+          </RecordFilters>
+
+          <div className="record-view-switch mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50/60 px-3 py-2">
             <p className="text-sm font-semibold text-rose-800">View</p>
             <div className="ml-auto inline-flex rounded-xl border border-rose-200 bg-white p-1">
               <button
@@ -230,7 +214,7 @@ export default function Procedures() {
                 }`}
               >
                 <List size={14} />
-                List
+                Table
               </button>
               <button
                 type="button"
@@ -242,12 +226,12 @@ export default function Procedures() {
                 }`}
               >
                 <LayoutGrid size={14} />
-                Tile
+                Cards
               </button>
             </div>
           </div>
 
-          {viewMode === "list" ? (
+          {desktopRecords && viewMode === "list" ? (
             <div className="mt-6 overflow-x-auto rounded-2xl border border-rose-200">
               <table className="min-w-full text-left text-sm">
                 <thead className="bg-rose-100 text-rose-900">
@@ -323,11 +307,10 @@ export default function Procedures() {
               </table>
             </div>
           ) : (
-            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="record-cards mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {loading && <p className="record-loading col-span-full" role="status">Finding your records...</p>}
               {!loading && procedures.length === 0 && (
-                <div className="col-span-full rounded-2xl border border-rose-200 bg-white p-6 text-center text-rose-700">
-                  No procedures found.
-                </div>
+                <RecordEmpty>No procedures found.</RecordEmpty>
               )}
               {procedures.map((procedure) => (
                 <article
@@ -339,7 +322,7 @@ export default function Procedures() {
                       <p className="text-xs font-semibold uppercase tracking-wide text-pink-600">
                         {procedure.status}
                       </p>
-                      <h3 className="mt-1 text-lg font-bold text-rose-900">
+                      <h3 className="mt-1 text-rose-900">
                         {procedure.procedure_name}
                       </h3>
                       <p className="text-sm text-rose-700">
@@ -445,11 +428,12 @@ export default function Procedures() {
 
 function ModalShell({ title, onClose, children }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-rose-950/35 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-3xl border border-pink-200 bg-white p-6 shadow-2xl md:p-7">
-        <div className="mb-4 flex items-center justify-between">
+    <div className="cute-modal-overlay fixed inset-0 z-50 grid place-items-center bg-rose-950/35 p-4 backdrop-blur-sm">
+          <div className="cute-modal w-full max-w-2xl rounded-3xl border border-pink-200 bg-white p-6 shadow-2xl md:p-7">
+            <div className="cute-modal-heading mb-4 flex items-center justify-between">
+              <ModalDecoration />
           <div>
-            <h2 className="text-xl font-bold text-rose-900">{title}</h2>
+            <h2 className="text-rose-900">{title}</h2>
             <p className="text-sm text-rose-700">
               Use the form below to save your entry.
             </p>

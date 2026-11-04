@@ -1,0 +1,5 @@
+# Environment files at every level of the repository.
+.env
+.env.*
+*.env
+*.env.*

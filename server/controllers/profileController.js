@@ -6,7 +6,7 @@ exports.getProfile = async (req, res) => {
     const userId = req.user.id;
 
     const result = await pool.query(
-      `SELECT id, full_name, email, phone_number, avatar_url, created_at
+      `SELECT id, full_name, username, phone_number, avatar_url, created_at
        FROM users
        WHERE id = $1`,
       [userId]
@@ -53,7 +53,7 @@ exports.updateProfile = async (req, res) => {
         RETURNING
           id,
           full_name,
-          email,
+          username,
           phone_number,
           avatar_url,
           created_at
@@ -76,7 +76,7 @@ exports.updateProfile = async (req, res) => {
         RETURNING
           id,
           full_name,
-          email,
+          username,
           phone_number,
           avatar_url,
           created_at

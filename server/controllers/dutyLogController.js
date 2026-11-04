@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const { normalizeLocation, dutyHours, invalid } = require("../utils/dutyLocation");
 
 // CREATE DUTY LOG
 exports.createDutyLog = async (req, res) => {
@@ -14,20 +15,18 @@ exports.createDutyLog = async (req, res) => {
       remarks,
     } = req.body;
 
-    // Compute hours
-    const start = new Date(`1970-01-01T${timeIn}Z`);
-    const end = new Date(`1970-01-01T${timeOut}Z`);
-
-    let diff = (end - start) / (1000 * 60 * 60);
-
-    if (diff < 0) diff += 24; // handles overnight shifts
-
-    const totalHours = parseFloat(diff.toFixed(2));
+    const totalHours = dutyHours(timeIn, timeOut);
+    const location = normalizeLocation(req.body.facilityLocation);
+    const clientEntryId = req.body.clientEntryId || null;
+    if (clientEntryId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(clientEntryId)) throw invalid("Invalid duty entry identifier.");
+    if (!hospital?.trim() || !dutyDate || !ward?.trim() || !shift) throw invalid("Complete the duty date, hospital, ward, and shift.");
 
     const result = await pool.query(
       `INSERT INTO duty_logs
-      (user_id, duty_date, hospital, ward, shift, time_in, time_out, total_hours, remarks)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      (user_id, duty_date, hospital, ward, shift, time_in, time_out, total_hours, remarks,
+       facility_latitude, facility_longitude, facility_address, facility_place_id, client_entry_id)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+      ON CONFLICT (user_id, client_entry_id) DO UPDATE SET client_entry_id = EXCLUDED.client_entry_id
       RETURNING *`,
       [
         userId,
@@ -39,6 +38,8 @@ exports.createDutyLog = async (req, res) => {
         timeOut,
         totalHours,
         remarks,
+        ...location,
+        clientEntryId,
       ]
     );
 
@@ -49,7 +50,7 @@ exports.createDutyLog = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(error.status || 500).json({ success: false, message: error.status === 400 ? error.message : "Server error" });
   }
 };
 
@@ -106,7 +107,7 @@ exports.getDutyLogs = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false });
+    res.status(error.status || 500).json({ success: false, message: error.status === 400 ? error.message : "Server error" });
   }
 };
 
@@ -126,25 +127,25 @@ exports.updateDutyLog = async (req, res) => {
       remarks,
     } = req.body;
 
-    const start = new Date(`1970-01-01T${timeIn}Z`);
-    const end = new Date(`1970-01-01T${timeOut}Z`);
-
-    let diff = (end - start) / (1000 * 60 * 60);
-    if (diff < 0) diff += 24;
-
-    const totalHours = parseFloat(diff.toFixed(2));
+    const totalHours = dutyHours(timeIn, timeOut);
+    const location = normalizeLocation(req.body.facilityLocation);
+    const locationProvided = req.body.facilityLocation !== undefined;
 
     const result = await pool.query(
       `UPDATE duty_logs
        SET duty_date=$1,
-           hospital=$2,
+           hospital=$2::text,
            ward=$3,
            shift=$4,
            time_in=$5,
            time_out=$6,
            total_hours=$7,
-           remarks=$8
-       WHERE id=$9 AND user_id=$10
+           remarks=$8,
+           facility_latitude=CASE WHEN $13 THEN $9 WHEN hospital::text IS DISTINCT FROM $2::text THEN NULL ELSE facility_latitude END,
+           facility_longitude=CASE WHEN $13 THEN $10 WHEN hospital::text IS DISTINCT FROM $2::text THEN NULL ELSE facility_longitude END,
+           facility_address=CASE WHEN $13 THEN $11 WHEN hospital::text IS DISTINCT FROM $2::text THEN NULL ELSE facility_address END,
+           facility_place_id=CASE WHEN $13 THEN $12 WHEN hospital::text IS DISTINCT FROM $2::text THEN NULL ELSE facility_place_id END
+       WHERE id=$14 AND user_id=$15
        RETURNING *`,
       [
         dutyDate,
@@ -155,10 +156,14 @@ exports.updateDutyLog = async (req, res) => {
         timeOut,
         totalHours,
         remarks,
+        ...location,
+        locationProvided,
         id,
         userId,
       ]
     );
+
+    if (!result.rows.length) return res.status(404).json({ success: false, message: "Duty log not found" });
 
     res.json({
       success: true,
@@ -167,7 +172,7 @@ exports.updateDutyLog = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false });
+    res.status(error.status || 500).json({ success: false, message: error.status === 400 ? error.message : "Server error" });
   }
 };
 
@@ -188,6 +193,6 @@ exports.deleteDutyLog = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false });
+    res.status(error.status || 500).json({ success: false, message: error.status === 400 ? error.message : "Server error" });
   }
 };

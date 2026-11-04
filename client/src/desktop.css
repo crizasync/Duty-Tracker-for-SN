@@ -1,0 +1,71 @@
+/* Keep decorative illustrations and playful surfaces in the mobile layout. */
+@media (min-width: 1024px) {
+  .heading-cat,
+  .heading-heart,
+  .modal-decoration,
+  .auth-mascot,
+  .brand-sparkle,
+  .filter-flower,
+  .auth-art,
+  .auth-card-sparkle,
+  .auth-heading-icon,
+  .auth-heart-divider,
+  .auth-divider-caption,
+  .auth-title-accent > svg,
+  .auth-story .eyebrow > svg,
+  .auth-story-footer > svg,
+  .auth-form-footer > svg,
+  .record-empty-art > svg:last-child,
+  .reflection-editor-intro > svg,
+  .reflection-writing-footer > span > svg { display: none; }
+
+  .auth-story::before,
+  .auth-story::after,
+  .auth-login .auth-form-panel::before,
+  .record-empty-art::before { content: none; }
+
+  .app-page { background: #f8fafc; }
+  .app-page :is(.rounded-3xl, .rounded-2xl).border,
+  .app-page .record-empty,
+  .app-page .record-filters {
+    border-color: #e2e8f0;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 0 1px 3px rgb(15 23 42 / 0.04);
+    backdrop-filter: none;
+  }
+  .app-page :is(h1, h2, h3) { color: #1e293b; }
+  .app-page button,
+  .auth-layout button { background-image: none; box-shadow: none; }
+  .app-page button.text-white,
+  .app-page .record-filter-actions button[type="submit"],
+  .app-page .page-heading-actions .page-heading-primary-action,
+  .auth-layout .auth-submit { background: var(--theme-accent); box-shadow: none; }
+  .app-page .page-heading-actions .page-heading-primary-action,
+  .app-page .page-heading-badge { border-radius: 8px; }
+
+  .app-page .cute-modal-overlay { background: rgb(15 23 42 / 0.45); backdrop-filter: none; }
+  .app-page .cute-modal-overlay > .cute-modal {
+    border: 1px solid #e2e8f0; border-radius: 12px; background: white;
+    box-shadow: 0 24px 64px rgb(15 23 42 / 0.18);
+  }
+  .cute-modal .cute-modal-heading {
+    min-height: 0; padding: 22px 64px 22px 24px;
+    border-bottom: 1px solid #e2e8f0; border-radius: 12px 12px 0 0; background: white;
+  }
+  .cute-modal-heading > div:not(.modal-decoration) { padding-right: 0; }
+  .cute-modal .cute-modal-heading h2 { font-family: var(--heading-font); font-size: 1.125rem; font-weight: 700; color: #1e293b; }
+  .cute-modal .cute-modal-heading p { color: #64748b; margin-top: 4px; }
+  .cute-modal .cute-modal-heading > button { top: 18px; right: 18px; border: 1px solid #e2e8f0; border-radius: 8px; background: white; box-shadow: none; color: #475569; }
+  .cute-modal :is(input:not([type="file"]):not([type="checkbox"]), select, textarea) { border-color: #cbd5e1; border-radius: 8px; background: white; }
+  .cute-modal button:not(.cute-modal-heading > button) { border-radius: 8px; font-weight: 600; }
+  .cute-modal :is(form, .grid) > .rounded-xl { border-radius: 8px; background: #f8fafc; }
+  .record-empty-art { color: #64748b; }
+  .record-empty p { color: #64748b; }
+
+  .auth-layout .auth-story { background: #f1f5f9; }
+  .auth-layout .auth-form-panel { background: white; }
+  .auth-highlights { margin-top: 32px; }
+  .auth-layout .auth-field input,
+  .auth-layout .auth-submit { border-radius: 8px; }
+}

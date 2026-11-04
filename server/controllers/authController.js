@@ -1,35 +1,49 @@
 const pool = require("../config/db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const dummyHash = bcrypt.hashSync("unmatchable-placeholder-password", 12);
 
 // REGISTER
 exports.register = async (req, res) => {
   try {
-    const { fullName, email, password } = req.body;
+    const { fullName, password, username } = req.body || {};
+    const normalizedUsername = typeof username === "string" ? username.trim().toLowerCase() : "";
+
+    if (!/^[a-z0-9_.-]{3,50}$/.test(normalizedUsername)) {
+      return res.status(400).json({
+        success: false,
+        message: "Username must be 3–50 letters, numbers, dots, underscores, or hyphens",
+      });
+    }
+
+    if (typeof fullName !== "string" || !fullName.trim() || fullName.length > 150 ||
+        typeof password !== "string" || password.length < 12 || Buffer.byteLength(password, "utf8") > 72) {
+      return res.status(400).json({ success: false, message: "Provide a name (up to 150 characters) and a password of at least 12 characters, up to 72 UTF-8 bytes." });
+    }
 
     // Check if user exists
     const userCheck = await pool.query(
-      "SELECT * FROM users WHERE email = $1",
-      [email]
+      "SELECT username FROM users WHERE LOWER(username) = $1",
+      [normalizedUsername]
     );
 
     if (userCheck.rows.length > 0) {
       return res.status(400).json({
         success: false,
-        message: "Email already exists",
+        message: "Username already exists",
       });
     }
 
     // Hash password
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // Insert user
     const newUser = await pool.query(
-      `INSERT INTO users (full_name, email, password)
+      `INSERT INTO users (full_name, password, username)
        VALUES ($1, $2, $3)
-       RETURNING id, full_name, email`,
-      [fullName, email, hashedPassword]
+       RETURNING id, full_name, username`,
+      [fullName, hashedPassword, normalizedUsername]
     );
 
     res.status(201).json({
@@ -38,6 +52,9 @@ exports.register = async (req, res) => {
       user: newUser.rows[0],
     });
   } catch (error) {
+    if (error.code === "23505") {
+      return res.status(400).json({ success: false, message: "Username already exists" });
+    }
     console.error(error);
     res.status(500).json({
       success: false,
@@ -49,15 +66,19 @@ exports.register = async (req, res) => {
 // LOGIN
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body || {};
+    if (typeof username !== "string" || !/^[a-z0-9_.-]{3,50}$/i.test(username.trim()) || typeof password !== "string" || !password || Buffer.byteLength(password, "utf8") > 72) {
+      return res.status(400).json({ success: false, message: "Invalid credentials" });
+    }
 
     // Find user
     const user = await pool.query(
-      "SELECT * FROM users WHERE email = $1",
-      [email]
+      "SELECT * FROM users WHERE LOWER(username) = $1",
+      [username.trim().toLowerCase()]
     );
 
     if (user.rows.length === 0) {
+      await bcrypt.compare(password, dummyHash);
       return res.status(400).json({
         success: false,
         message: "Invalid credentials",
@@ -80,10 +101,10 @@ exports.login = async (req, res) => {
     const token = jwt.sign(
       {
         id: foundUser.id,
-        email: foundUser.email,
+        username: foundUser.username,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "1d" }
+      { expiresIn: "1d", algorithm: "HS256" }
     );
 
     res.json({
@@ -92,7 +113,8 @@ exports.login = async (req, res) => {
       user: {
         id: foundUser.id,
         full_name: foundUser.full_name,
-        email: foundUser.email,
+        username: foundUser.username,
+        avatar_url: foundUser.avatar_url,
       },
     });
   } catch (error) {

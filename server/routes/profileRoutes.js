@@ -17,6 +17,7 @@ router.put(
   "/",
   auth,
   upload.single("avatar"),
+  require("../middleware/inputGuard"),
   updateProfile
 );
 

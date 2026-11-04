@@ -6,10 +6,14 @@ import Dashboard from "./pages/Dashboard";
 import DutyLogs from "./pages/DutyLogs";
 import Procedures from "./pages/Procedures";
 import Reflections from "./pages/Reflections";
+import AddReflection from "./pages/AddReflection";
+import { lazy, Suspense } from "react";
 import Reports from "./pages/Reports";
 import Profile from "./pages/Profile";
 
 import ProtectedRoute from "./components/ProtectedRoute";
+
+const GeoMap = lazy(() => import("./pages/GeoMap"));
 
 function App() {
   return (
@@ -53,6 +57,16 @@ function App() {
             <Reflections />
           </ProtectedRoute>
         }
+      />
+
+      <Route
+        path="/reflections/new"
+        element={<ProtectedRoute><AddReflection /></ProtectedRoute>}
+      />
+
+      <Route
+        path="/geomap"
+        element={<ProtectedRoute><Suspense fallback={<div className="app-page min-h-screen p-6" role="status">Loading GeoMap...</div>}><GeoMap /></Suspense></ProtectedRoute>}
       />
 
       <Route

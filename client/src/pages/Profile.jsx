@@ -1,9 +1,16 @@
-import { useEffect, useState } from "react";
+import ModalDecoration from "../components/ModalDecoration";
+import PageHeading from "../components/PageHeading";
+import { useContext, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Camera, Pencil, UserRound, Upload, X } from "lucide-react";
+import { Camera, Pencil, UserRound, X } from "lucide-react";
 
 import MenuBar from "../components/MenuBar";
+import { defaultColor, useTheme } from "../context/theme";
+import ThemePicker from "../components/ThemePicker";
 import { getProfile, updateProfile } from "../services/profile";
+
+import { AuthContext } from "../context/AuthContext";
+import { getAvatarUrl } from "../utils/avatar";
 
 const initialEditForm = {
   fullName: "",
@@ -11,6 +18,8 @@ const initialEditForm = {
 };
 
 export default function Profile() {
+  const { theme, setTheme } = useTheme();
+  const { updateUser } = useContext(AuthContext);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -19,50 +28,40 @@ export default function Profile() {
 
   const [editForm, setEditForm] = useState(initialEditForm);
 
-  // New states
   const [selectedImage, setSelectedImage] = useState(null);
-  const [preview, setPreview] = useState("");
+  const [selectedPreview, setSelectedPreview] = useState("");
+  const savedAvatar = getAvatarUrl(profile?.avatar_url);
+  const preview = selectedPreview || savedAvatar;
 
   useEffect(() => {
+    let active = true;
+    const loadProfile = async () => {
+      try {
+        const res = await getProfile();
+        if (active) setProfile(res.data.profile);
+      } catch {
+        if (active) toast.error("Unable to load profile.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
     loadProfile();
+    return () => { active = false; };
   }, []);
 
-  const loadProfile = async () => {
-    try {
-      const res = await getProfile();
+  useEffect(() => () => {
+    if (selectedPreview) URL.revokeObjectURL(selectedPreview);
+  }, [selectedPreview]);
 
-      const user = res.data.profile;
-
-      setProfile(user);
-
-      setEditForm({
-        fullName: user?.full_name || "",
-        phoneNumber: user?.phone_number || "",
-      });
-
-      if (user?.avatar_url) {
-        setPreview(`${import.meta.env.VITE_API_URL}${user.avatar_url}`);
-      }
-    } catch {
-      toast.error("Unable to load profile.");
-    } finally {
-      setLoading(false);
-    }
+  const openEditModal = () => {
+    setEditForm({ fullName: profile?.full_name || "", phoneNumber: profile?.phone_number || "" });
+    setIsEditOpen(true);
   };
-
-  const openEditModal = () => setIsEditOpen(true);
 
   const closeEditModal = () => {
     setIsEditOpen(false);
-
-    // restore preview if cancelled
-    if (profile?.avatar_url) {
-      setPreview(`${import.meta.env.VITE_API_URL}${profile.avatar_url}`);
-    } else {
-      setPreview("");
-    }
-
     setSelectedImage(null);
+    setSelectedPreview("");
   };
 
   const handleImageChange = (e) => {
@@ -70,8 +69,8 @@ export default function Profile() {
 
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image.");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Please select a JPG, PNG, or WEBP image.");
       return;
     }
 
@@ -81,13 +80,14 @@ export default function Profile() {
     }
 
     setSelectedImage(file);
-    // preview for immediate display in the left card
-    setPreview(URL.createObjectURL(file));
+    // Keep unsaved selections inside the editor.
+    setSelectedPreview(URL.createObjectURL(file));
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
 
+    if (submitting) return;
     setSubmitting(true);
 
     try {
@@ -102,24 +102,11 @@ export default function Profile() {
 
       const res = await updateProfile(formData);
 
-      setProfile(res.data.profile);
-
-      // Reflect updated avatar in preview (and bust cache so the new image shows)
-      const updated = res?.data?.profile;
-
-      if (updated?.avatar_url) {
-        setPreview(
-          `${import.meta.env.VITE_API_URL}${updated.avatar_url}?t=${Date.now()}`,
-        );
-      } else {
-        setPreview("");
-      }
-
-      toast.success("Profile updated!");
-
+      const updated = res.data.profile;
+      setProfile(updated);
+      updateUser(updated);
       closeEditModal();
-
-      loadProfile();
+      toast.success("Profile updated!");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to update profile.");
     } finally {
@@ -135,38 +122,33 @@ export default function Profile() {
     .toUpperCase();
 
   return (
-    <div className="min-h-screen bg-rose-50 p-6">
+    <div className="app-page profile-page min-h-screen p-4 md:p-6">
       <div className="mx-auto max-w-6xl space-y-5">
         <MenuBar />
 
         {/* Header */}
         <section className="rounded-3xl border border-pink-200 bg-white p-6 shadow-sm">
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-pink-600">
-                Account Profile
-              </p>
-
-              <h1 className="mt-2 text-3xl font-black text-rose-900">
-                Your Personal Profile
-              </h1>
-
-              <p className="mt-2 text-sm text-rose-700">
-                Update your personal information and profile picture.
-              </p>
-            </div>
-
+          <PageHeading eyebrow="PROFILE" title="Your little corner" description="Make yourself at home.">
             <button
               onClick={openEditModal}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 px-5 py-3 font-semibold text-white hover:brightness-110"
+              className="page-heading-primary-action flex items-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 px-5 py-3 font-semibold text-white hover:brightness-110"
             >
               <Pencil size={18} />
               Edit Profile
             </button>
-          </div>
+          </PageHeading>
         </section>
 
         {/* Body */}
+        <section aria-labelledby="appearance-title" className="rounded-3xl border border-pink-200 bg-white p-6 shadow-sm">
+          <h2 id="appearance-title" className="text-rose-900">Color theme</h2>
+          <p className="mt-1 text-sm text-rose-700">Pick any color. Your preference is saved for this account on this browser.</p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <ThemePicker />
+            <span className="font-mono text-sm text-rose-800">{theme.toUpperCase()}</span>
+            <button type="button" onClick={() => setTheme(defaultColor)} className="rounded-lg border border-pink-200 px-3 py-2 text-sm font-semibold text-rose-800 hover:bg-pink-50 focus-visible:outline-2 focus-visible:outline-pink-600">Reset color</button>
+          </div>
+        </section>
         <section className="grid gap-6 lg:grid-cols-[320px_1fr]">
           {/* LEFT CARD */}
 
@@ -174,9 +156,9 @@ export default function Profile() {
             <div className="flex flex-col items-center">
               <div className="relative">
                 <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-full border-4 border-pink-200 bg-gradient-to-br from-pink-100 to-rose-100 text-4xl font-black text-rose-700">
-                  {preview ? (
+                  {savedAvatar ? (
                     <img
-                      src={preview}
+                      src={savedAvatar}
                       alt="Profile"
                       className="h-full w-full object-cover"
                     />
@@ -193,11 +175,11 @@ export default function Profile() {
                 </button>
               </div>
 
-              <h2 className="mt-5 text-2xl font-bold text-rose-900">
+              <h2 className="mt-5 text-rose-900">
                 {loading ? "Loading..." : profile?.full_name}
               </h2>
 
-              <p className="text-sm text-rose-600">{profile?.email}</p>
+              <p className="text-sm text-rose-600">{profile?.username}</p>
             </div>
 
             <div className="mt-8 space-y-3">
@@ -225,7 +207,7 @@ export default function Profile() {
               </div>
 
               <div>
-                <h2 className="text-xl font-bold text-rose-900">
+                <h2 className="text-rose-900">
                   Profile Overview
                 </h2>
 
@@ -238,7 +220,7 @@ export default function Profile() {
             <div className="grid gap-4 md:grid-cols-2">
               <InfoCard label="Full Name" value={profile?.full_name || "-"} />
 
-              <InfoCard label="Email" value={profile?.email || "-"} />
+              <InfoCard label="Username" value={profile?.username || "-"} />
 
               <InfoCard
                 label="Phone Number"
@@ -252,11 +234,12 @@ export default function Profile() {
       {/* EDIT PROFILE MODAL */}
 
       {isEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl rounded-3xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-pink-100 px-6 py-5">
+        <div className="cute-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="cute-modal w-full max-w-2xl rounded-3xl bg-white shadow-2xl">
+            <div className="cute-modal-heading flex items-center justify-between border-b border-pink-100 px-6 py-5">
+              <ModalDecoration />
               <div>
-                <h2 className="text-2xl font-bold text-rose-900">
+                <h2 className="text-rose-900">
                   Edit Profile
                 </h2>
 
@@ -303,7 +286,7 @@ export default function Profile() {
                 <input
                   id="avatar"
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   onChange={handleImageChange}
                   className="hidden"
                 />
