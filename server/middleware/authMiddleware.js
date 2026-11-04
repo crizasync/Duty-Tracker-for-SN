@@ -14,7 +14,11 @@ module.exports = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] });
-    if (!decoded || typeof decoded !== "object" || !/^[1-9]\d*$/.test(String(decoded.id))) {
+    const id = decoded?.id;
+    const validId = (typeof id === "string" &&
+      (/^[1-9]\d*$/.test(id) || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) ||
+      (typeof id === "number" && Number.isSafeInteger(id) && id > 0);
+    if (!decoded || typeof decoded !== "object" || !validId) {
       return res.status(401).json({ success: false, message: "Invalid token" });
     }
     req.user = decoded;

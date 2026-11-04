@@ -65,6 +65,24 @@ test("JWT checks reject malformed headers, expiry, missing IDs and alternate alg
   assert.equal((await request("/protected", { headers: bearer() })).status, 200);
 });
 
+test("verified UUID account IDs work on protected routes and remain bound owner parameters", async () => {
+  const id = "62cc96cb-02b9-4f8f-a1ed-ddb1784b2326";
+  const response = await request("/protected", { headers: bearer(id) });
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { id });
+  const records = await request("/procedures", { headers: bearer(id) });
+  assert.equal(records.status, 200);
+  assert.deepEqual(queries.at(-1).params, [id]);
+});
+
+test("signed tokens with malformed IDs or a different signing key are rejected", async () => {
+  for (const id of [null, "", "not-a-uuid", "7 OR 1=1", {}, [], -1, 0, 1.5]) {
+    assert.equal((await request("/protected", { headers: bearer(id) })).status, 401);
+  }
+  const token = jwt.sign({ id: "62cc96cb-02b9-4f8f-a1ed-ddb1784b2326" }, "different-secret", { algorithm: "HS256" });
+  assert.equal((await request("/protected", { headers: { Authorization: `Bearer ${token}` } })).status, 401);
+});
+
 test("login blocks the eleventh failed attempt with retry headers", async () => {
   for (let i = 0; i < 10; i++) {
     const response = await request("/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: "rate.test" }) });
