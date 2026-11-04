@@ -1,6 +1,7 @@
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const { randomUUID } = require("node:crypto");
 
 // Create uploads folder if it doesn't exist
 const pathToUploads = path.join(__dirname, "..", "uploads");
@@ -18,8 +19,8 @@ const storage = multer.diskStorage({
 
 
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `avatar-${Date.now()}${ext}`);
+    const extensions = { "image/jpeg": ".jpg", "image/jpg": ".jpg", "image/png": ".png", "image/webp": ".webp" };
+    cb(null, `avatar-${randomUUID()}${extensions[file.mimetype]}`);
   },
 });
 

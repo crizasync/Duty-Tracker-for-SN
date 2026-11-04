@@ -6,11 +6,17 @@ const pool = require("../config/db");
 async function migrate() {
   const client = await pool.connect();
   try {
+    if (process.argv.includes("--avatars-only")) {
+      await client.query(fs.readFileSync(path.join(__dirname, "004_profile_images.sql"), "utf8"));
+      console.log("Profile image migration complete.");
+      return;
+    }
     if (!process.argv.includes("--geomap-only")) {
       await client.query(fs.readFileSync(path.join(__dirname, "001_usernames.sql"), "utf8"));
       await client.query(fs.readFileSync(path.join(__dirname, "002_optional_legacy_email.sql"), "utf8"));
     }
     await client.query(fs.readFileSync(path.join(__dirname, "003_geomap.sql"), "utf8"));
+    await client.query(fs.readFileSync(path.join(__dirname, "004_profile_images.sql"), "utf8"));
     console.log("Database migrations complete.");
   } catch (error) {
     await client.query("ROLLBACK");

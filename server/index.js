@@ -74,6 +74,7 @@ app.use((req, res, next) => {
 // ==========================================
 // UPLOADED AVATARS
 // ==========================================
+app.get("/uploads/:filename", require("./controllers/avatarController").getAvatar);
 app.use(
   "/uploads",
   express.static(path.join(__dirname, "uploads"))

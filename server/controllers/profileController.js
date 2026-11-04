@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const fs = require("node:fs/promises");
 
 // GET PROFILE
 exports.getProfile = async (req, res) => {
@@ -33,8 +34,6 @@ exports.updateProfile = async (req, res) => {
     // If a new image was uploaded
     if (req.file) {
       avatarUrl = `/uploads/${req.file.filename}`;
-    } else {
-      console.log("updateProfile: req.file is missing (no avatar uploaded)");
     }
 
 
@@ -43,13 +42,24 @@ exports.updateProfile = async (req, res) => {
 
     // Update with avatar
     if (avatarUrl) {
+      const image = await fs.readFile(req.file.path);
       query = `
+        WITH saved_image AS (
+          INSERT INTO profile_images (user_id, filename, content_type, image_data)
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT (user_id) DO UPDATE SET
+            filename = EXCLUDED.filename,
+            content_type = EXCLUDED.content_type,
+            image_data = EXCLUDED.image_data,
+            updated_at = NOW()
+          RETURNING filename
+        )
         UPDATE users
         SET
-          full_name = $1,
-          phone_number = $2,
-          avatar_url = $3
-        WHERE id = $4
+          full_name = $5,
+          phone_number = $6,
+          avatar_url = '/uploads/' || (SELECT filename FROM saved_image)
+        WHERE id = $7
         RETURNING
           id,
           full_name,
@@ -60,9 +70,12 @@ exports.updateProfile = async (req, res) => {
       `;
 
       values = [
+        String(userId),
+        req.file.filename,
+        req.file.mimetype === "image/jpg" ? "image/jpeg" : req.file.mimetype,
+        image,
         fullName,
         phoneNumber,
-        avatarUrl,
         userId,
       ];
     } else {
@@ -103,5 +116,8 @@ exports.updateProfile = async (req, res) => {
       success: false,
       message: "Server error",
     });
+  } finally {
+    // The uploaded temporary file is no longer needed after the database write.
+    if (req.file?.path) await fs.unlink(req.file.path).catch(() => {});
   }
 };

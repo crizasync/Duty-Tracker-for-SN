@@ -1,4 +1,8 @@
 Run `npm run migrate` from `server` before starting the updated application.
+For the persistent profile image update alone, run `node migrations/run.js --avatars-only`.
+New avatars are stored in PostgreSQL instead of relying on Render's temporary filesystem.
+Existing `/uploads/...` URLs still work while their files exist; images already lost on
+the host must be uploaded again. The app does not impose a profile image MB limit.
 The migration uses `DATABASE_URL` from the server environment.
 
 Existing accounts receive the part of their email before `@`, lowercased and
