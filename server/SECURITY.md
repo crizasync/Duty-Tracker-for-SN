@@ -1,6 +1,6 @@
 # Security controls
 
-New passwords use bcrypt with a random salt and cost 12. Registration requires exactly 8 characters. Existing bcrypt hashes remain compatible. Passwords and hashes are never returned by the authentication API.
+New passwords use bcrypt with a random salt and cost 12. Registration requires at least 8 characters. The server also enforces bcrypt?s 72-byte input boundary to prevent silent truncation; this technical limit is not shown in the UI. Existing bcrypt hashes remain compatible. Passwords and hashes are never returned by the authentication API.
 
 Login allows 10 failed attempts per normalized username and IP per 15 minutes, plus 50 total attempts per IP per 15 minutes. Registration and PDF downloads do not have request rate limits. Limits return HTTP 429 and Retry-After. Limits currently use process memory: multiple server instances need a shared rate-limit store, and restarting the server resets counters. Behind a reverse proxy, set TRUST_PROXY_HOPS only to the actual trusted hop count, and restrict direct backend access so clients cannot forge forwarded addresses.
 

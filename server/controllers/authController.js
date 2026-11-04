@@ -17,8 +17,11 @@ exports.register = async (req, res) => {
     }
 
     if (typeof fullName !== "string" || !fullName.trim() || fullName.length > 150 ||
-        typeof password !== "string" || password.length !== 8) {
-      return res.status(400).json({ success: false, message: "Provide a name (up to 150 characters) and a password of exactly 8 characters." });
+        typeof password !== "string" || password.length < 8) {
+      return res.status(400).json({ success: false, message: "Provide a name (up to 150 characters) and a password of at least 8 characters." });
+    }
+    if (Buffer.byteLength(password, "utf8") > 72) {
+      return res.status(400).json({ success: false, message: "Password is too long. Please choose a shorter password." });
     }
 
     // Check if user exists

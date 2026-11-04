@@ -97,12 +97,26 @@ test("registration rejects invalid and duplicate usernames", async () => {
   assert.deepEqual(queries.at(-1).params, ["nurse.one"]);
 });
 
-test("registration rejects passwords that are not exactly eight characters", async () => {
-  for (const password of ["short", "a".repeat(7), "a".repeat(9), "a".repeat(73), { $ne: null }, null]) {
+test("registration rejects passwords below eight characters and bcrypt overflow", async () => {
+  for (const password of ["short", "a".repeat(7), "a".repeat(73), "🙂".repeat(19), { $ne: null }, null]) {
     const res = response();
     const count = queries.length;
     await auth.register({ body: { fullName: "Nurse", username: "nurse.test", password } }, res);
     assert.equal(res.statusCode, 400);
     assert.equal(queries.length, count);
+  }
+});
+
+test("registration accepts passwords longer than eight characters", async () => {
+  rows = [];
+  insertedUser = { id: 3, full_name: "Nurse Three", username: "nurse.three" };
+  try {
+    const password = "A-longer-password-123";
+    const res = response();
+    await auth.register({ body: { fullName: "Nurse Three", username: "nurse.three", password } }, res);
+    assert.equal(res.statusCode, 201);
+    assert.equal(await bcrypt.compare(password, queries.at(-1).params[1]), true);
+  } finally {
+    insertedUser = undefined;
   }
 });
