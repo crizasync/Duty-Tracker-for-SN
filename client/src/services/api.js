@@ -1,6 +1,7 @@
 import axios from "axios";
 import { createOfflineCache } from "../utils/offlineCache";
 import { resolveApiBase } from "../utils/apiBase";
+import { expireRejectedSession, sessionExpiredEvent } from "../utils/session";
 
 const cache = createOfflineCache(localStorage);
 const accountId = () => {
@@ -38,6 +39,7 @@ api.interceptors.response.use((response) => {
   }
   return response;
 }, (error) => {
+  expireRejectedSession(error, localStorage, () => window.dispatchEvent(new Event(sessionExpiredEvent)));
   if (!error.response && error.config?.offlineAccountId === accountId()) {
     const saved = cache.read(error.config, accountId());
     if (saved) return { data: { ...saved.data, offline: true }, status: 200, statusText: "Offline cache", headers: {}, config: error.config };

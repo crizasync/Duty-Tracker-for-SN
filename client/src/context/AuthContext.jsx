@@ -4,6 +4,7 @@ import {
   register as registerRequest,
 } from "../services/auth";
 import { getProfile } from "../services/profile";
+import { sessionExpiredEvent } from "../utils/session";
 
 export const AuthContext = createContext();
 
@@ -14,11 +15,18 @@ export default function AuthProvider({ children }) {
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
 
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    if (storedUser && localStorage.getItem("token")) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        localStorage.removeItem("user");
+      }
     }
 
     setLoading(false);
+    const expired = () => setUser(null);
+    window.addEventListener(sessionExpiredEvent, expired);
+    return () => window.removeEventListener(sessionExpiredEvent, expired);
   }, []);
 
   useEffect(() => {
