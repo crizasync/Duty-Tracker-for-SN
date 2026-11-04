@@ -15,7 +15,7 @@ exports.startPdf = (res, filename, rowCount = 0) => {
   res.setHeader("Pragma", "no-cache");
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Content-Security-Policy", "sandbox; default-src 'none'");
-  const doc = new PDFDocument({ pdfVersion: "1.7", autoFirstPage: true });
+  const doc = new PDFDocument({ pdfVersion: "1.7", size: "A4", margins: { top: 76, bottom: 60, left: 42, right: 42 }, bufferPages: true, autoFirstPage: true });
   doc.on("error", () => res.destroy());
   res.on("close", () => { if (!doc.destroyed) doc.destroy(); });
   doc.pipe(res);

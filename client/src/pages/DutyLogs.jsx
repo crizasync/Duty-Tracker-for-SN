@@ -1,3 +1,4 @@
+import ModalDateTimeField from "../components/ModalDateTimeField";
 import FacilityPicker from "../components/FacilityPicker";
 import { locationFromLog } from "../utils/geoMap";
 import { dutyRecordsEvent } from "../services/dutyLogs";
@@ -435,7 +436,7 @@ export default function DutyLogs() {
               onSubmit={handleEditSave}
               className="grid gap-3 md:grid-cols-2"
             >
-              <input
+              <ModalDateTimeField label="Duty date"
                 type="date"
                 value={editForm.dutyDate}
                 onChange={(e) =>
@@ -446,7 +447,7 @@ export default function DutyLogs() {
               />
               <input
                 type="text"
-                placeholder="Hospital"
+                placeholder="e.g. Philippine General Hospital" aria-label="Hospital"
                 value={editForm.hospital}
                 onChange={(e) =>
                   setEditForm({ ...editForm, hospital: e.target.value, facilityLocation: null })
@@ -457,7 +458,7 @@ export default function DutyLogs() {
               <FacilityPicker hospital={editForm.hospital} location={editForm.facilityLocation} onChange={(facility) => setEditForm({ ...editForm, facilityLocation: facility, ...(facility?.name ? { hospital: facility.name } : {}) })} />
               <input
                 type="text"
-                placeholder="Ward"
+                placeholder="e.g. Emergency Room" aria-label="Ward"
                 value={editForm.ward}
                 onChange={(e) =>
                   setEditForm({ ...editForm, ward: e.target.value })
@@ -477,7 +478,7 @@ export default function DutyLogs() {
                 <option>Afternoon</option>
                 <option>Night</option>
               </select>
-              <input
+              <ModalDateTimeField label="Time in"
                 type="time"
                 value={editForm.timeIn}
                 onChange={(e) =>
@@ -486,7 +487,7 @@ export default function DutyLogs() {
                 className="rounded-xl border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-300"
                 required
               />
-              <input
+              <ModalDateTimeField label="Time out"
                 type="time"
                 value={editForm.timeOut}
                 onChange={(e) =>
@@ -497,7 +498,7 @@ export default function DutyLogs() {
               />
               <input
                 type="text"
-                placeholder="Remarks"
+                placeholder="Optional notes about your shift" aria-label="Remarks"
                 value={editForm.remarks}
                 onChange={(e) =>
                   setEditForm({ ...editForm, remarks: e.target.value })
@@ -643,7 +644,7 @@ export default function DutyLogs() {
             </div>
 
             <form onSubmit={handleCreate} className="grid gap-3 md:grid-cols-2">
-              <input
+              <ModalDateTimeField label="Duty date"
                 type="date"
                 value={formData.dutyDate}
                 onChange={(e) =>
@@ -654,7 +655,7 @@ export default function DutyLogs() {
               />
               <input
                 type="text"
-                placeholder="Hospital"
+                placeholder="e.g. Philippine General Hospital" aria-label="Hospital"
                 value={formData.hospital}
                 onChange={(e) =>
                   setFormData({ ...formData, hospital: e.target.value, facilityLocation: null })
@@ -665,7 +666,7 @@ export default function DutyLogs() {
               <FacilityPicker hospital={formData.hospital} location={formData.facilityLocation} onChange={(facility) => setFormData({ ...formData, facilityLocation: facility, ...(facility?.name ? { hospital: facility.name } : {}) })} />
               <input
                 type="text"
-                placeholder="Ward"
+                placeholder="e.g. Emergency Room" aria-label="Ward"
                 value={formData.ward}
                 onChange={(e) =>
                   setFormData({ ...formData, ward: e.target.value })
@@ -685,7 +686,7 @@ export default function DutyLogs() {
                 <option>Afternoon</option>
                 <option>Night</option>
               </select>
-              <input
+              <ModalDateTimeField label="Time in"
                 type="time"
                 value={formData.timeIn}
                 onChange={(e) =>
@@ -694,7 +695,7 @@ export default function DutyLogs() {
                 className="rounded-xl border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-300"
                 required
               />
-              <input
+              <ModalDateTimeField label="Time out"
                 type="time"
                 value={formData.timeOut}
                 onChange={(e) =>
@@ -705,7 +706,7 @@ export default function DutyLogs() {
               />
               <input
                 type="text"
-                placeholder="Remarks"
+                placeholder="Optional notes about your shift" aria-label="Remarks"
                 value={formData.remarks}
                 onChange={(e) =>
                   setFormData({ ...formData, remarks: e.target.value })

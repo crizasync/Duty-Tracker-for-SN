@@ -1,18 +1,20 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useEffect, useRef, useState } from "react";
 import {
   login as loginRequest,
   register as registerRequest,
 } from "../services/auth";
 import { getProfile } from "../services/profile";
-import { sessionExpiredEvent } from "../utils/session";
+import { clearSession, installMobileSessionLock, isMobileSession, sessionExpiredEvent } from "../utils/session";
 
 export const AuthContext = createContext();
 
 export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const sessionEpoch = useRef(0);
 
   useEffect(() => {
+    if (isMobileSession(window)) clearSession(localStorage);
     const storedUser = localStorage.getItem("user");
 
     if (storedUser && localStorage.getItem("token")) {
@@ -24,9 +26,13 @@ export default function AuthProvider({ children }) {
     }
 
     setLoading(false);
-    const expired = () => setUser(null);
+    const expired = () => { sessionEpoch.current++; setUser(null); };
     window.addEventListener(sessionExpiredEvent, expired);
-    return () => window.removeEventListener(sessionExpiredEvent, expired);
+    const cleanup = installMobileSessionLock({ browser: window, document, storage: localStorage, onLock: expired });
+    return () => {
+      cleanup();
+      window.removeEventListener(sessionExpiredEvent, expired);
+    };
   }, []);
 
   useEffect(() => {
@@ -58,6 +64,7 @@ export default function AuthProvider({ children }) {
   }, [user?.id]);
 
   const loginUser = (userData, token) => {
+    if (isMobileSession(window) && document.visibilityState === "hidden") throw new Error("Reopen the app to sign in.");
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(userData));
 
@@ -65,7 +72,9 @@ export default function AuthProvider({ children }) {
   };
 
   const login = async (username, password) => {
+    const epoch = sessionEpoch.current;
     const response = await loginRequest({ username, password });
+    if (epoch !== sessionEpoch.current) throw new Error("Please sign in again.");
     const { user: userData, token } = response.data;
 
     loginUser(userData, token);
@@ -78,6 +87,7 @@ export default function AuthProvider({ children }) {
   };
 
   const logoutUser = () => {
+    sessionEpoch.current++;
     localStorage.removeItem("token");
     localStorage.removeItem("user");
 

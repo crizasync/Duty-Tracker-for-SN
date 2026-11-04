@@ -1,155 +1,73 @@
 const pool = require("../config/db");
-const { startPdf, pdfText } = require("../utils/securePdf");
+const { startPdf } = require("../utils/securePdf");
+const { beginReport, sectionTitle, reportTable, reflectionEntry, finishReport, reportDate } = require("../utils/reportLayout");
 
-// 📄 DUTY LOG REPORT (PDF)
-exports.generateDutyReport = async (req, res) => {
+const hours = value => (Number(value) || 0).toFixed(2);
+const definitions = {
+  duty: { title: "Duty Log Report", sql: "SELECT * FROM duty_logs WHERE user_id = $1 ORDER BY duty_date DESC LIMIT 1001" },
+  procedure: { title: "Procedure Report", sql: "SELECT procedure_name, status, frequency, date_performed FROM procedures WHERE user_id = $1 ORDER BY date_performed DESC LIMIT 1001" },
+  reflection: { title: "Reflection Journal", sql: "SELECT title, duty_date, content FROM reflections WHERE user_id = $1 ORDER BY duty_date DESC LIMIT 1001" },
+  summary: { title: "Clinical Summary", sql: `SELECT
+    (SELECT COALESCE(SUM(total_hours), 0) FROM duty_logs WHERE user_id = $1) AS hours,
+    (SELECT COUNT(*) FROM duty_logs WHERE user_id = $1) AS duties,
+    (SELECT COUNT(*) FROM procedures WHERE user_id = $1) AS procedures,
+    (SELECT COUNT(*) FROM procedures WHERE user_id = $1 AND LOWER(TRIM(status)) = 'completed') AS completed,
+    (SELECT COUNT(*) FROM procedures WHERE user_id = $1 AND LOWER(TRIM(status)) = 'pending') AS pending,
+    (SELECT COUNT(*) FROM reflections WHERE user_id = $1) AS reflections` },
+};
+
+const generate = kind => async (req, res) => {
   try {
-    const userId = req.user.id;
-
-    const result = await pool.query(
-      `SELECT * FROM duty_logs
-       WHERE user_id = $1
-       ORDER BY duty_date DESC LIMIT 1001`,
-      [userId]
-    );
-
-    const doc = startPdf(res, "duty-report.pdf", result.rows.length);
+    const definition = definitions[kind];
+    const owner = await pool.query("SELECT full_name, username FROM users WHERE id = $1", [req.user.id]);
+    const result = await pool.query(definition.sql, [req.user.id]);
+    const rows = result.rows;
+    const doc = startPdf(res, kind + "-report.pdf", kind === "summary" ? 0 : rows.length);
     if (!doc) return;
-
-    doc.fontSize(18).text("Duty-Tracker - Duty Log Report", {
-      align: "center",
-    });
-
-    doc.moveDown();
-
-    result.rows.forEach((log, index) => {
-      doc.fontSize(12).text(
-        `${index + 1}. ${pdfText(log.duty_date, 500)} | ${pdfText(log.hospital, 500)} | ${pdfText(log.ward, 500)} | ${pdfText(log.shift, 500)} | Hours: ${pdfText(log.total_hours, 500)}`
-      );
-      doc.moveDown(0.5);
-    });
-
-    doc.end();
+    const profile = owner.rows[0] || { username: req.user.username };
+    if (kind === "duty") {
+      const total = rows.reduce((sum, row) => sum + (Number(row.total_hours) || 0), 0);
+      beginReport(doc, definition.title, profile, [["Shifts recorded", rows.length], ["Total hours", hours(total)], ["Average hours / shift", hours(rows.length ? total / rows.length : 0)]]);
+      sectionTitle(doc, "Duty register");
+      reportTable(doc, [
+        { label: "DATE", share: .18 }, { label: "FACILITY / WARD", share: .38 },
+        { label: "SHIFT", share: .18 }, { label: "HOURS", share: .12, align: "right" }, { label: "NO.", share: .14, align: "right" },
+      ], rows.map((row, i) => [reportDate(row.duty_date), [row.hospital, row.ward].filter(Boolean).join(" / "), row.shift, hours(row.total_hours), i + 1]));
+    } else if (kind === "procedure") {
+      const completed = rows.filter(row => String(row.status).trim().toLowerCase() === "completed").length;
+      const pending = rows.filter(row => String(row.status).trim().toLowerCase() === "pending").length;
+      beginReport(doc, definition.title, profile, [["Procedures recorded", rows.length], ["Completed", completed], ["Pending", pending]]);
+      sectionTitle(doc, "Procedure register");
+      reportTable(doc, [
+        { label: "DATE", share: .18 }, { label: "PROCEDURE", share: .42 },
+        { label: "STATUS", share: .20 }, { label: "FREQUENCY", share: .20 },
+      ], rows.map(row => [reportDate(row.date_performed), row.procedure_name, row.status, row.frequency]));
+    } else if (kind === "reflection") {
+      beginReport(doc, definition.title, profile, [["Journal entries", rows.length], ["Coverage", "All dates"]]);
+      sectionTitle(doc, "Clinical reflections");
+      if (!rows.length) doc.font("Helvetica").fontSize(10).text("No reflections available for this report.");
+      rows.forEach((entry, i) => reflectionEntry(doc, entry, i));
+    } else {
+      const summary = rows[0] || {};
+      beginReport(doc, definition.title, profile, [["Clinical hours", hours(summary.hours)], ["Shifts recorded", summary.duties || 0], ["Procedures", summary.procedures || 0]]);
+      sectionTitle(doc, "Activity overview");
+      reportTable(doc, [{ label: "MEASURE", share: .72 }, { label: "TOTAL", share: .28, align: "right" }], [
+        ["Total clinical hours", hours(summary.hours)], ["Duty shifts recorded", summary.duties || 0],
+        ["Procedures recorded", summary.procedures || 0], ["Completed procedures", summary.completed || 0],
+        ["Pending procedures", summary.pending || 0], ["Reflection entries", summary.reflections || 0],
+        ["Average hours per shift", hours(Number(summary.duties) ? Number(summary.hours) / Number(summary.duties) : 0)],
+      ]);
+      doc.font("Helvetica").fontSize(9).fillColor("#64748b").text("This report summarizes records entered by the account holder. It does not certify attendance or competency.", 42, doc.y, { width: doc.page.width - 84, lineGap: 3 });
+    }
+    finishReport(doc);
   } catch (error) {
     console.error(error);
     if (res.headersSent) return res.destroy();
-    res.status(500).json({ success: false });
+    res.status(500).json({ success: false, message: "Unable to generate report" });
   }
 };
 
-// PROCEDURE REPORT
-exports.generateProcedureReport = async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const result = await pool.query(
-      `SELECT procedure_name, status, frequency
-       FROM procedures
-       WHERE user_id = $1 LIMIT 1001`,
-      [userId]
-    );
-
-    const doc = startPdf(res, "procedure-report.pdf", result.rows.length);
-    if (!doc) return;
-
-    doc.fontSize(18).text("Procedure Summary Report", {
-      align: "center",
-    });
-
-    doc.moveDown();
-
-    result.rows.forEach((p, i) => {
-      doc.text(
-        `${i + 1}. ${pdfText(p.procedure_name, 500)} | ${pdfText(p.status, 500)} | Frequency: ${pdfText(p.frequency, 500)}`
-      );
-      doc.moveDown(0.5);
-    });
-
-    doc.end();
-  } catch (error) {
-    console.error(error);
-    if (res.headersSent) return res.destroy();
-    res.status(500).json({ success: false });
-  }
-};
-
-// REFLECTION REPORT
-exports.generateReflectionReport = async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const result = await pool.query(
-      `SELECT title, duty_date, content
-       FROM reflections
-       WHERE user_id = $1
-       ORDER BY duty_date DESC LIMIT 1001`,
-      [userId]
-    );
-
-    const doc = startPdf(res, "reflection-report.pdf", result.rows.length);
-    if (!doc) return;
-
-    doc.fontSize(18).text("Reflection Journal Report", {
-      align: "center",
-    });
-
-    doc.moveDown();
-
-    result.rows.forEach((r, i) => {
-      doc.fontSize(12).text(
-        `${i + 1}. ${pdfText(r.duty_date, 500)} - ${pdfText(r.title, 500)}`
-      );
-
-      doc.text(pdfText(r.content));
-      doc.moveDown();
-    });
-
-    doc.end();
-  } catch (error) {
-    console.error(error);
-    if (res.headersSent) return res.destroy();
-    res.status(500).json({ success: false });
-  }
-};
-
-// SUMMARY REPORT
-exports.generateSummaryReport = async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const hours = await pool.query(
-      "SELECT SUM(total_hours) FROM duty_logs WHERE user_id = $1",
-      [userId]
-    );
-
-    const duties = await pool.query(
-      "SELECT COUNT(*) FROM duty_logs WHERE user_id = $1",
-      [userId]
-    );
-
-    const doc = startPdf(res, "summary-report.pdf", 0);
-    if (!doc) return;
-
-    doc.fontSize(18).text("Clinical Summary Report", {
-      align: "center",
-    });
-
-    doc.moveDown();
-
-    doc.fontSize(12).text(
-      `Total Clinical Hours: ${hours.rows[0].sum || 0}`
-    );
-
-    doc.text(
-      `Total Duty Logs: ${duties.rows[0].count}`
-    );
-
-    doc.end();
-  } catch (error) {
-    console.error(error);
-    if (res.headersSent) return res.destroy();
-    res.status(500).json({ success: false });
-  }
-};
-
-
+exports.generateDutyReport = generate("duty");
+exports.generateProcedureReport = generate("procedure");
+exports.generateReflectionReport = generate("reflection");
+exports.generateSummaryReport = generate("summary");

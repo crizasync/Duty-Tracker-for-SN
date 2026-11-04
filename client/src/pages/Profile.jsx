@@ -74,11 +74,6 @@ export default function Profile() {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image must be less than 2MB.");
-      return;
-    }
-
     setSelectedImage(file);
     // Keep unsaved selections inside the editor.
     setSelectedPreview(URL.createObjectURL(file));
@@ -292,7 +287,7 @@ export default function Profile() {
                 />
 
                 <p className="mt-3 text-xs text-gray-500">
-                  JPG, PNG or WEBP (Maximum 2MB)
+                  JPG, PNG or WEBP
                 </p>
               </div>
 
@@ -307,6 +302,7 @@ export default function Profile() {
                   <input
                     type="text"
                     value={editForm.fullName}
+                    placeholder="e.g. Maria Santos"
                     onChange={(e) =>
                       setEditForm({
                         ...editForm,
@@ -326,6 +322,7 @@ export default function Profile() {
                   <input
                     type="text"
                     value={editForm.phoneNumber}
+                    placeholder="e.g. 0912 345 6789"
                     onChange={(e) =>
                       setEditForm({
                         ...editForm,

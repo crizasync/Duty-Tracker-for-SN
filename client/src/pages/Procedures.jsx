@@ -1,3 +1,4 @@
+import ModalDateTimeField from "../components/ModalDateTimeField";
 import ModalDecoration from "../components/ModalDecoration";
 import RecordEmpty from "../components/RecordEmpty";
 import RecordFilters from "../components/RecordFilters";
@@ -464,7 +465,7 @@ function ProcedureForm({
     <form onSubmit={onSubmit} className="grid gap-3 md:grid-cols-2">
       <input
         type="text"
-        placeholder="Procedure name"
+        placeholder="e.g. Blood pressure monitoring" aria-label="Procedure name"
         value={formData.procedureName}
         onChange={(e) =>
           setFormData({ ...formData, procedureName: e.target.value })
@@ -483,14 +484,14 @@ function ProcedureForm({
       </select>
       <input
         type="text"
-        placeholder="Frequency"
+        placeholder="e.g. 3 times" aria-label="Frequency"
         value={formData.frequency}
         onChange={(e) =>
           setFormData({ ...formData, frequency: e.target.value })
         }
         className="rounded-xl border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-300"
       />
-      <input
+      <ModalDateTimeField label="Date performed"
         type="date"
         value={formData.datePerformed}
         onChange={(e) =>
@@ -500,7 +501,7 @@ function ProcedureForm({
         required
       />
       <textarea
-        placeholder="Notes"
+        placeholder="What did you observe or assist with?" aria-label="Notes"
         value={formData.notes}
         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
         className="min-h-28 rounded-xl border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-300 md:col-span-2"

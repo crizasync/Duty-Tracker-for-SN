@@ -449,6 +449,14 @@ body {
 .pwa-status svg { flex-shrink: 0; }
 .pwa-status button { padding: 7px 14px; border-radius: 20px; background: white; border: 1px solid var(--color-pink-200); font-weight: 750; cursor: pointer; }
 
+.modal-native-field { display: block; min-width: 0; }
+.modal-native-field > input { width: 100%; }
+.modal-native-field > span { display: none; }
+@media (max-width: 1023px) {
+  .modal-native-field > span { display: block; margin-bottom: 6px; font-size: 0.78rem; font-weight: 700; color: var(--color-pink-800); }
+  .cute-modal :is(input, textarea)::placeholder { color: #807185; opacity: 1; font-weight: 400; }
+}
+
 /* Shared primary action styling keeps every page heading in the active palette. */
 .app-page .page-heading-actions .page-heading-primary-action {
   background: var(--button-gradient);

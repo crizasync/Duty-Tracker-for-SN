@@ -1,3 +1,4 @@
+import ModalDateTimeField from "../components/ModalDateTimeField";
 import ModalDecoration from "../components/ModalDecoration";
 import { Link } from "react-router-dom";
 import RecordEmpty from "../components/RecordEmpty";
@@ -428,7 +429,7 @@ function ReflectionForm({
 }) {
   return (
     <form onSubmit={onSubmit} className="grid gap-3 md:grid-cols-2">
-      <input
+      <ModalDateTimeField label="Duty date"
         type="date"
         value={formData.dutyDate}
         onChange={(e) => setFormData({ ...formData, dutyDate: e.target.value })}
@@ -437,14 +438,14 @@ function ReflectionForm({
       />
       <input
         type="text"
-        placeholder="Reflection title"
+        placeholder="e.g. My first shift in the ER" aria-label="Reflection title"
         value={formData.title}
         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
         className="rounded-xl border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-300"
         required
       />
       <textarea
-        placeholder="Reflection content"
+        placeholder="What happened, what did you learn, and how did you feel?" aria-label="Reflection content"
         value={formData.content}
         onChange={(e) => setFormData({ ...formData, content: e.target.value })}
         className="min-h-36 rounded-xl border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-300 md:col-span-2"
