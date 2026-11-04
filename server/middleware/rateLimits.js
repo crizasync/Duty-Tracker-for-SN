@@ -14,10 +14,3 @@ exports.loginAccountLimit = rateLimit({
   skipSuccessfulRequests: true,
   keyGenerator: req => `${ipKeyGenerator(req.ip)}:${typeof req.body?.username === "string" ? req.body.username.trim().toLowerCase().slice(0, 50) : "invalid"}`,
 });
-exports.registrationLimit = rateLimit({ ...base, limit: 5 });
-exports.reportLimit = rateLimit({
-  ...base,
-  windowMs: 60 * 1000,
-  limit: 5,
-  keyGenerator: req => String(req.user.id),
-});

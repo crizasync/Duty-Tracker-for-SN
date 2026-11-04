@@ -17,4 +17,4 @@ Backend runtime settings:
 
 Before starting the updated backend, run `npm run migrate` from `server` against the deployed database. The username migrations add usernames and remove the old required email field. Without these migrations, username-only registration can fail. Run the command as a release/pre-deploy step, then start with `npm start` from `server`.
 
-Registration requires a full name, a unique 3–50-character username and a password of at least 12 characters (at most 72 UTF-8 bytes). HTTP 400 indicates invalid input or a duplicate username, 429 indicates throttling, 403 can indicate a CORS origin mismatch, and 500 requires checking backend/database logs. Do not publish environment secrets or passwords in logs.
+Registration requires a full name, a unique 3–50-character username and a password of exactly 8 characters. HTTP 400 indicates invalid input or a duplicate username, 429 indicates throttling, 403 can indicate a CORS origin mismatch, and 500 requires checking backend/database logs. Do not publish environment secrets or passwords in logs.

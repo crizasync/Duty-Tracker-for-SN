@@ -449,6 +449,7 @@ body {
 .pwa-status svg { flex-shrink: 0; }
 .pwa-status button { padding: 7px 14px; border-radius: 20px; background: white; border: 1px solid var(--color-pink-200); font-weight: 750; cursor: pointer; }
 
+.pwa-update-notice { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 16px; }
 .modal-form-field { min-width: 0; }
 .modal-form-field > :is(input, select, textarea) { width: 100%; }
 .modal-field-label, .modal-field-hint { display: none; }

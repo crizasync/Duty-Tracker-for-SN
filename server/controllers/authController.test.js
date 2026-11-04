@@ -61,14 +61,14 @@ test("registration succeeds without email and hashes the password", async () => 
   insertedUser = { id: 2, full_name: "Nurse Two", username: "nurse.two" };
   try {
     const res = response();
-    await auth.register({ body: { fullName: "Nurse Two", username: " Nurse.Two ", password: "new-password-long" } }, res);
+    await auth.register({ body: { fullName: "Nurse Two", username: " Nurse.Two ", password: "Secure12" } }, res);
     assert.equal(res.statusCode, 201);
     assert.deepEqual(res.body.user, insertedUser);
     const insert = queries.at(-1);
     assert.doesNotMatch(insert.sql, /email/i);
     assert.equal(insert.params[0], "Nurse Two");
     assert.equal(insert.params[2], "nurse.two");
-    assert.equal(await bcrypt.compare("new-password-long", insert.params[1]), true);
+    assert.equal(await bcrypt.compare("Secure12", insert.params[1]), true);
     assert.equal(bcrypt.getRounds(insert.params[1]), 12);
   } finally {
     insertedUser = undefined;
@@ -92,13 +92,13 @@ test("registration rejects invalid and duplicate usernames", async () => {
 
   rows = [{ username: "nurse.one" }];
   const duplicate = response();
-  await auth.register({ body: { fullName: "Nurse One", email: "nurse@example.com", username: " Nurse.One ", password: "password-long" } }, duplicate);
+  await auth.register({ body: { fullName: "Nurse One", email: "nurse@example.com", username: " Nurse.One ", password: "Secure12" } }, duplicate);
   assert.equal(duplicate.statusCode, 400);
   assert.deepEqual(queries.at(-1).params, ["nurse.one"]);
 });
 
-test("registration rejects weak, oversized, multibyte-overflow and non-string passwords", async () => {
-  for (const password of ["short", "a".repeat(73), "🙂".repeat(19), { $ne: null }, null]) {
+test("registration rejects passwords that are not exactly eight characters", async () => {
+  for (const password of ["short", "a".repeat(7), "a".repeat(9), "a".repeat(73), { $ne: null }, null]) {
     const res = response();
     const count = queries.length;
     await auth.register({ body: { fullName: "Nurse", username: "nurse.test", password } }, res);

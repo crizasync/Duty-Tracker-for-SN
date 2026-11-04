@@ -8,6 +8,6 @@ On mobile layouts (under 1024px), opening/reloading the app, leaving it in the b
 
 First-time sign-in, registration, profile uploads, edits/deletions of server records, new procedures/reflections, PDF downloads, facility searches and uncached map tiles require a connection. Cached records remain on this device; sign-out removes access to them in the app, and each account uses its own cache.
 
-New builds install in the background and activate after existing app windows close, keeping each open session's assets consistent.
+New builds install in the background. When an update is ready, save any open form and choose Refresh app to activate it. Updates also activate after existing app windows close. Reconnecting or returning to the app checks for a newer version.
 
 Manual check: serve the production build, sign in, visit record pages, create a shift, then switch the browser offline. Reload `/dashboard` and `/duty-logs`, create another shift, and verify it is marked waiting to sync. Reconnect with the app open and verify one server record is created. Sign out and check another account cannot see the first account's cached views.

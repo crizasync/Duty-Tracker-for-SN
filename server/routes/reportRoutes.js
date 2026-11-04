@@ -2,8 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const auth = require("../middleware/authMiddleware");
-const { reportLimit } = require("../middleware/rateLimits");
-router.use(auth, reportLimit);
+router.use(auth);
 
 const {
   generateDutyReport,

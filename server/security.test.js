@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const inputGuard = require("./middleware/inputGuard");
-const { loginIpLimit, loginAccountLimit, reportLimit } = require("./middleware/rateLimits");
+const { loginIpLimit, loginAccountLimit } = require("./middleware/rateLimits");
 const { pdfText, startPdf } = require("./utils/securePdf");
 
 const queries = [];
@@ -22,7 +22,7 @@ app.use(express.json(), inputGuard);
 app.post("/login", loginIpLimit, loginAccountLimit, (req, res) => res.status(400).json({ success: false }));
 app.get("/protected", auth, (req, res) => res.json({ id: req.user.id }));
 app.get("/procedures", auth, procedures.getProcedures);
-app.get("/pdf", auth, reportLimit, reports.generateDutyReport);
+app.get("/pdf", auth, reports.generateDutyReport);
 const server = app.listen(0, "127.0.0.1");
 const ready = new Promise(resolve => server.on("listening", resolve));
 const request = async (path, options = {}) => {
@@ -93,7 +93,7 @@ test("login blocks the eleventh failed attempt with retry headers", async () => 
   assert.ok(Number(blocked.headers.get("retry-after")) > 0);
 });
 
-test("PDF requires login, is owner-scoped, downloads privately, and is rate limited", async () => {
+test("PDF requires login, is owner-scoped, downloads privately, and has no request rate limit", async () => {
   assert.equal((await request("/pdf")).status, 401);
   const response = await request("/pdf", { headers: bearer() });
   assert.equal(response.status, 200);
@@ -110,7 +110,9 @@ test("PDF requires login, is owner-scoped, downloads privately, and is rate limi
     assert.equal(pdf.status, 200);
     await pdf.arrayBuffer();
   }
-  assert.equal((await request("/pdf", { headers: bearer() })).status, 429);
+  const sixth = await request("/pdf", { headers: bearer() });
+  assert.equal(sixth.status, 200);
+  await sixth.arrayBuffer();
 });
 
 test("PDF text drops control characters and caps size; oversized reports fail before streaming", () => {
