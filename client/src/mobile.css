@@ -449,6 +449,14 @@ body {
 .pwa-status svg { flex-shrink: 0; }
 .pwa-status button { padding: 7px 14px; border-radius: 20px; background: white; border: 1px solid var(--color-pink-200); font-weight: 750; cursor: pointer; }
 
+.modal-form-field { min-width: 0; }
+.modal-form-field > :is(input, select, textarea) { width: 100%; }
+.modal-field-label, .modal-field-hint { display: none; }
+@media (max-width: 1023px) {
+  .cute-modal .modal-field-label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 7px; font-size: 0.85rem; font-weight: 750; color: var(--color-pink-900); }
+  .modal-field-label > span { font-size: 0.68rem; font-weight: 500; color: #64748b; }
+  .cute-modal .modal-field-hint { display: block; margin-top: 5px; font-size: 0.73rem; line-height: 1.5; color: #64748b; }
+}
 .modal-native-field { display: block; min-width: 0; }
 .modal-native-field > input { width: 100%; }
 .modal-native-field > span { display: none; }

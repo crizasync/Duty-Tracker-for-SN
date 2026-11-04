@@ -1,4 +1,4 @@
-import ModalDateTimeField from "../components/ModalDateTimeField";
+import ModalField from "../components/ModalField";
 import ModalDecoration from "../components/ModalDecoration";
 import RecordEmpty from "../components/RecordEmpty";
 import RecordFilters from "../components/RecordFilters";
@@ -463,9 +463,9 @@ function ProcedureForm({
 }) {
   return (
     <form onSubmit={onSubmit} className="grid gap-3 md:grid-cols-2">
-      <input
+      <ModalField label="Procedure name"
         type="text"
-        placeholder="e.g. Blood pressure monitoring" aria-label="Procedure name"
+        placeholder="e.g. Blood pressure monitoring"
         value={formData.procedureName}
         onChange={(e) =>
           setFormData({ ...formData, procedureName: e.target.value })
@@ -473,7 +473,7 @@ function ProcedureForm({
         className="rounded-xl border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-300"
         required
       />
-      <select
+      <ModalField as="select" label="Status"
         value={formData.status}
         onChange={(e) => setFormData({ ...formData, status: e.target.value })}
         className="rounded-xl border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-300"
@@ -481,17 +481,17 @@ function ProcedureForm({
       >
         <option>Completed</option>
         <option>Pending</option>
-      </select>
-      <input
+      </ModalField>
+      <ModalField label="Frequency"
         type="text"
-        placeholder="e.g. 3 times" aria-label="Frequency"
+        placeholder="e.g. 3 times"
         value={formData.frequency}
         onChange={(e) =>
           setFormData({ ...formData, frequency: e.target.value })
         }
         className="rounded-xl border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-300"
       />
-      <ModalDateTimeField label="Date performed"
+      <ModalField label="Date performed"
         type="date"
         value={formData.datePerformed}
         onChange={(e) =>
@@ -500,8 +500,8 @@ function ProcedureForm({
         className="rounded-xl border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-300"
         required
       />
-      <textarea
-        placeholder="What did you observe or assist with?" aria-label="Notes"
+      <ModalField as="textarea" label="Notes"
+        placeholder="What did you observe or assist with?"
         value={formData.notes}
         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
         className="min-h-28 rounded-xl border border-pink-200 bg-pink-50/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-300 md:col-span-2"
