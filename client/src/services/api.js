@@ -1,5 +1,6 @@
 import axios from "axios";
 import { createOfflineCache } from "../utils/offlineCache";
+import { resolveApiBase } from "../utils/apiBase";
 
 const cache = createOfflineCache(localStorage);
 const accountId = () => {
@@ -7,7 +8,7 @@ const accountId = () => {
 };
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: resolveApiBase(import.meta.env.VITE_API_URL),
   timeout: 10000,
 });
 

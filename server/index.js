@@ -33,23 +33,7 @@ if (process.env.TRUST_PROXY_HOPS) {
 // ==========================================
 // CORS CONFIGURATION
 // ==========================================
-const allowedOrigins = [
-  "http://localhost:5173",
-  process.env.CLIENT_URL,
-].filter(Boolean);
-
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests without an Origin header
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error("Not allowed by CORS"));
-    },
-  })
-);
+app.use(cors(require("./config/cors").corsOptions(process.env.CLIENT_URL)));
 
 // ==========================================
 // REQUEST BODY PARSING
